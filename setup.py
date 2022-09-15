@@ -56,7 +56,7 @@ setuptools.setup(
     description='python wrapper for ZWO astronomical cameras',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/MPI-IS/zwo_asi',
+    url='https://github.com/MPI-IS/camera_zwo_asi',
     license='BSD 3-Clause License',
     author='Vincent Berenz',
     author_email='vberenz@tue.mpg.de',

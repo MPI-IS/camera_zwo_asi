@@ -18,7 +18,7 @@ camera-zwo-asi has been tested only with python 3.10 on Ubuntu 20.04, but is lik
 The following APT dependencies are required:
 
 ```bash
-apt install -Y libusb-1.0-0-dev libgl1-mesa-glx  libglib2.0-dev libopencv-dev python3-dev
+apt install -y libusb-1.0-0-dev libgl1-mesa-glx  libglib2.0-dev libopencv-dev python3-dev cmake ninja-build libusb-dev
 ```
 
 ## Installation

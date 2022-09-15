@@ -50,7 +50,7 @@ class Camera(bindings.Camera):
         """
         return super().get_controls()
 
-    def configure_from_toml(self, path: Path) -> None:
+    def configure_from_toml(self, config: typing.Union[Path,typing.Mapping[str,typing.Any]]) -> None:
         """
         Configure the camera using a TOML formated configuration file.
         To get an example configuration file: see the method
@@ -59,15 +59,19 @@ class Camera(bindings.Camera):
         in the TOML configuration.
         """
 
-        # checking file exists
-        if not path.is_file():
-            raise FileNotFoundError(
-                f"failed to configure camera from {path}: file not found"
-            )
+        if isinstance(config,Path):
+            # checking file exists
+            if not config.is_file():
+                raise FileNotFoundError(
+                    f"failed to configure camera from {config}: file not found"
+                )
 
-        # parsing file
-        content = toml.load(path)
+            # parsing file
+            content = toml.load(config)
 
+        else:
+            content = config
+            
         # making sure it has content for both controllables and ROI
         required_keys = ("controllables", "roi")
         for rk in required_keys:
