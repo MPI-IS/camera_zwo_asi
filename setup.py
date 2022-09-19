@@ -17,6 +17,7 @@ init_py = inspect.cleandoc(
     from .roi import ROI
     from .image import Image
     from .version import __version__
+    from . import image_matrix
 
     """
 )
