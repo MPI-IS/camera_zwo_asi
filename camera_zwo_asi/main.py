@@ -19,9 +19,11 @@ def udev():
     print("\nThe file 99-asi.rules has been created in the current directory.")
     print("You may install it: 'sudo install 99-asi.rules /lib/udev/rules.d'")
     print("and disconnect / reconnect the camera.")
-    print("More information: https://astronomy-imaging-camera.com/manuals/ASI%20Cameras%20software%20Manual%20Linux%20OSX%20EN.pdf\n")
+    print(
+        "More information: https://astronomy-imaging-camera.com/manuals/ASI%20Cameras%20software%20Manual%20Linux%20OSX%20EN.pdf\n"
+    )
 
-    
+
 def print_():
     """
     print to the console information about the

@@ -11,7 +11,30 @@ from .image import get_image_class, Image, FlattenData
 from camera_zwo_asi.bindings import ImageType
 
 
-class ParameterRange:
+class ControlRange:
+    """
+    Configuration item for the method "create_hdf5", allowing the user
+    to specify for a given control which range of value should be used.
+
+    Arguments
+    ---------
+    min:
+      start of the range.
+    max:
+      end of the range.
+    step:
+      step between min and max.
+    threshold:
+      as the method 'create_hdf5' will go through the values, it
+      will set the camera configuration accordingly. For some control
+      (for now we only have temperature in mind) this may require time
+      and not be precise. This threshold setup the accepted level of precision
+      for the control.
+    timeout:
+      the camera will attempt to setup the right value (+/ threshold) for
+      at maximum this duration (in seconds).
+    """
+
     def __init__(
         self,
         min: int,
@@ -30,39 +53,45 @@ class ParameterRange:
         """
         return the list of values in the range
         """
-        return list(range(self.min, self.max+1, self.step))
+        return list(range(self.min, self.max + 1, self.step))
 
     def __repr__(self) -> str:
         return str(
-            f"ParameterRange({self.min},{self.max}, "
+            f"ControlRange({self.min},{self.max}, "
             f"{self.step},{self.threshold},{self.timeout})"
         )
 
 
-def _iterate_ints(*a)->typing.Generator[typing.Tuple[int,...],None,None]:
+def _iterate_ints(*a) -> typing.Generator[typing.Tuple[int, ...], None, None]:
+    """
+    returns all combination of values
+    """
     for values in itertools.product(*a):
         yield values
     return None
 
 
-def _iterate_parameters(
-    parameters: typing.List[ParameterRange],
-) -> typing.Generator[typing.Tuple[int,...], None, None]:
+def _iterate_controls(
+    controls: typing.List[ControlRange],
+) -> typing.Generator[typing.Tuple[int, ...], None, None]:
     """
     Function that iterate over all the possible combinations of
-    parameters
+    controls
     """
-    all_values = [prange.get_values() for prange in parameters]
+    all_values = [prange.get_values() for prange in controls]
     return _iterate_ints(*all_values)
 
 
 def _set_control(
-    camera: Camera, parameter: str, value: int, timeout: float, threshold: float
+    camera: Camera, control: str, value: int, timeout: float, threshold: float
 ) -> None:
-    camera.set_control(parameter, value)
+    """
+    Configure the camera.
+    """
+    camera.set_control(control, value)
     start = time.time()
     while time.time() - start < timeout:
-        obtained_value = camera.get_controls()[parameter].value
+        obtained_value = camera.get_controls()[control].value
         if abs(value - obtained_value) <= threshold:
             return
         time.sleep(0.01)
@@ -70,25 +99,31 @@ def _set_control(
 
 def _add_to_hdf5(
     camera: Camera,
-    parameters: typing.Dict[str, int],
+    controls: typing.Dict[str, int],
     hdf5_file: h5py.File,
     avg_over: int,
     timeouts: typing.List[float],
     thresholds: typing.List[int],
-    previous_parameters: typing.Optional[typing.Dict[str, int]] = None,
+    previous_controls: typing.Optional[typing.Dict[str, int]] = None,
 ) -> None:
+    """
+    Has the camera take images, average them and adds this averaged image
+    to the hdf5 file, with 'path'
+    like hdf5_file[param1.value][param2.value][param3.value]...
+    Before taking the image, the camera's configuration is set accordingly.
+    """
 
     # setting the configuration
-    for index, (parameter, value) in enumerate(parameters.items()):
-        if previous_parameters is None or previous_parameters[parameter] != value:
-            _set_control(camera, parameter, value, timeouts[index], thresholds[index])
+    for index, (control, value) in enumerate(controls.items()):
+        if previous_controls is None or previous_controls[control] != value:
+            _set_control(camera, control, value, timeouts[index], thresholds[index])
 
     # getting the configuration values, which may or may not
     # be what we asked for (e.g. when setting temperature)
-    all_parameters = camera.get_controls()
-    current_parameters = OrderedDict()
-    for parameter in parameters.keys():
-        current_parameters[parameter] = all_parameters[parameter].value
+    all_controls = camera.get_controls()
+    current_controls = OrderedDict()
+    for control in controls.keys():
+        current_controls[control] = all_controls[control].value
 
     # taking and averaging the pictures
     images = [camera.capture().get_data() for _ in range(avg_over)]
@@ -96,7 +131,7 @@ def _add_to_hdf5(
 
     # adding the image to the hdf5 file
     group = hdf5_file
-    for parameter, value in current_parameters.items():
+    for control, value in current_controls.items():
         group = group.require_group(str(value))
     group.create_dataset("image", data=image)
 
@@ -106,106 +141,156 @@ def _add_to_hdf5(
 
 def create_hdf5(
     camera: Camera,
-    parameters: typing.OrderedDict[str, ParameterRange],
+    controls: typing.OrderedDict[str, ControlRange],
     avg_over: int,
-    hdf5_path: Path
+    hdf5_path: Path,
 ) -> int:
+    """
+    Create an hdf5 image library file, by taking pictures using
+    the specified configuration range. For each configuration,
+    'avg_over' pictures are taken and averaged.
+    Images can be accessed using instances of 'ImageLibrary'.
+    """
 
-    timeouts = [parameter.timeout for parameter in parameters.values()]
-    thresholds = [parameter.threshold for parameter in parameters.values()]
-    
+    timeouts = [control.timeout for control in controls.values()]
+    thresholds = [control.threshold for control in controls.values()]
+
     # opening the hdf5 file in write mode
     with h5py.File(hdf5_path, "w") as hdf5_file:
 
-        # adding the parameters to the hdf5 file
-        hdf5_file.attrs["parameters"] = repr(parameters)
+        # adding the controls to the hdf5 file
+        hdf5_file.attrs["controls"] = repr(controls)
 
         # adding the file format, width and height to the hdf5 file
         roi = camera.get_roi()
-        hdf5_file.attrs["image_format"] = str(roi.type)
-        hdf5_file.attrs["width"] = str(roi.width)
-        hdf5_file.attrs["height"] = str(roi.height)
+        hdf5_file.attrs["image_type"] = str(roi.type)
+        hdf5_file.attrs["width"] = roi.width
+        hdf5_file.attrs["height"] = roi.height
 
         # counting the number of images saved
         nb_images = 0
-        
-        # iterating over all the parameters and adding
+
+        # iterating over all the controls and adding
         # the images to the hdf5 file
-        parameter_ranges: typing.List[ParameterRange] = list(parameters.values())
-        for values in _iterate_parameters(parameter_ranges):
+        control_ranges: typing.List[ControlRange] = list(controls.values())
+        for values in _iterate_controls(control_ranges):
             values_dict = {
-                parameter: value for parameter, value in zip(parameters.keys(), values)
+                control: value for control, value in zip(controls.keys(), values)
             }
             _add_to_hdf5(camera, values_dict, hdf5_file, avg_over, timeouts, thresholds)
-            nb_images+=1
+            nb_images += 1
 
         return nb_images
 
+
 def _get_closest(value: int, values: typing.List[int]) -> int:
+    """
+    Returns the item of values the closest to value
+    (e.g. value=5, values=[1,6,10,11] : 6 is returned)
+    """
     diffs = [abs(value - v) for v in values]
     index_min = min(range(len(diffs)), key=diffs.__getitem__)
     return values[index_min]
 
 
 def _get_image(
-        values: typing.List[int],
-        hdf5_file: h5py.File,
-        index: int = 0
-) -> typing.Tuple[FlattenData,typing.Dict]:
+    values: typing.List[int], hdf5_file: h5py.File, index: int = 0
+) -> typing.Tuple[FlattenData, typing.Dict]:
+    """
+    Returns the image in the library which has been taken with
+    the configuration the closest to "values".
+    """
 
-    keys = list([int(k) for k in hdf5_file.keys()])
-    best_value = _get_closest(values[index], keys)
+    if "image" in hdf5_file.keys():
+        img = hdf5_file["image"]
+        config = eval(hdf5_file.attrs["camera_config"])
+        return img, config
 
-    if len(values) == (index - 2):
-        group = hdf5_file[str(best_value)]
-        img = group["image"]
-        config = eval(group.attrs["camera_config"])
-        return img,config
-
-    return _get_image(values, hdf5_file[best_value], index + 1)
+    else:
+        keys = list([int(k) for k in hdf5_file.keys()])
+        best_value = _get_closest(values[index], keys)
+        return _get_image(values, hdf5_file[str(best_value)], index + 1)
 
 
 class ImageLibrary:
+    """
+    Object for reading an hdf5 file that must have been generated
+    using the 'create_hdf5' method of this module.
+    Allows to access images in the library.
+    """
+
     def __init__(self, hdf5_path: Path) -> None:
         self._path = hdf5_path
         self._hdf5_file = h5py.File(hdf5_path, "r")
-        self._parameters: typing.List[str] = sorted(
-            eval(self._hdf5_file.attrs["parameters"])
+        self._controls: typing.List[str] = sorted(
+            eval(self._hdf5_file.attrs["controls"])
         )
-        type_: ImageType = eval(self._hdf5_file.attr["image_type"])
-        width: int = int(self._hdf5_file.attr["width"])
-        height: int = int(self._hdf5_file.attr["height"])
-        image_class = get_image_class(type_)
-        self._image_instance = image_class(width,height)
-        
-    def params(self) -> typing.OrderedDict[str, ParameterRange]:
-        return eval(self._hdf5_file.attrs["parameters"])
+        self._type: ImageType = eval(self._hdf5_file.attrs["image_type"])
+        self._width: int = int(self._hdf5_file.attrs["width"])
+        self._height: int = int(self._hdf5_file.attrs["height"])
+        self._image_class = get_image_class(self._type)
+
+    def params(self) -> typing.OrderedDict[str, ControlRange]:
+        """
+        Returns the range of values that have been used to generate
+        this file.
+        """
+        return eval(self._hdf5_file.attrs["controls"])
+
+    def image_type(self) -> ImageType:
+        """
+        The type of the images stored in the library
+        """
+        return self._type
+
+    def size(self) -> typing.Tuple[int, int]:
+        """
+        Width and height of the images stored in the library
+        """
+        return (self._width, self.height)
 
     def get(
-            self,
-            parameters: typing.Dict[str, int]
-    ) -> typing.Tuple[Image,typing.Dict]:
+        self, controls: typing.Dict[str, int]
+    ) -> typing.Tuple[Image, typing.Dict]:
+        """
+        Returns the image in the library that was taken using
+        the configuration the closest to the passed controls.
 
-        for parameter in parameters:
-            if parameter not in self._parameters:
-                slist = ", ".join(self._parameters)
+        Arguments
+        ---------
+        controls:
+          keys of controls are expected to the the same as
+          the keys of the dictionary returned by the method
+          'params' of this class
+
+        Returns
+        -------
+        Tuple: image of the library and its related camera configuration
+        """
+
+        for control in controls:
+            if control not in self._controls:
+                slist = ", ".join(self._controls)
                 raise ValueError(
                     f"Failed to get an image from the image library {self._path}: "
-                    f"the parameter {parameter} is not supported (supported: {slist})"
+                    f"the control {control} is not supported (supported: {slist})"
                 )
 
-        for parameter in self._parameters:
-            if parameter not in parameters:
+        for control in self._controls:
+            if control not in controls:
                 raise ValueError(
                     f"Failed to get an image from the image library {self._path}: "
-                    f"the value for the parameter {parameter} needs to be specified"
+                    f"the value for the control {control} needs to be specified"
                 )
 
-        values = list(parameters.values())
-        image: FlattenData = _get_image(values, self._hdf5_file, index=0)
-        self._image_instance._data = image
-        return copy.deepcopy(self._image_instance)
-        
+        values = list(controls.values())
+        image: FlattenData
+        config: typing.Dict
+        image, config = _get_image(values, self._hdf5_file, index=0)
+        image_instance = self._image_class(self._width, self._height)
+        image_instance._data = image
+        return image_instance, config
+
     def close(self) -> None:
         self._hdf5_file.close()
 
