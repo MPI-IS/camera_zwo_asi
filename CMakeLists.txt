@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.18)
 
 project(zwo_asi VERSION 0.1)
 
@@ -22,6 +22,19 @@ find_package(pybind11 REQUIRED)
 find_package(Python3 COMPONENTS Interpreter)
 find_package(USB REQUIRED)
 find_package(Threads REQUIRED)
+
+
+##########################
+# armv7 or x64 library ? #
+# ZWO library            #
+##########################
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "armv7")
+  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv7/libASICamera2.a)
+else()
+  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/x64/libASICamera2.a)
+endif()
+
 
 ###################################################
 # zwo_asi: library for higher level calls to the #
@@ -48,7 +61,7 @@ target_include_directories(zwo_asi PUBLIC
    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
    ${ASI_INCLUDE_DIR} 
    )
- target_link_libraries(zwo_asi ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/x64/libASICamera2.a ${LIBUSB_LIBRARIES} Threads::Threads)
+ target_link_libraries(zwo_asi ${LIBASICAMERA_PATH} ${LIBUSB_LIBRARIES} Threads::Threads)
 
 #################################
 # python bindings over zwo_asi #
@@ -65,7 +78,7 @@ set_target_properties(pybind11_bindings PROPERTIES
   OUTPUT_NAME "bindings"
   )
 target_link_libraries(pybind11_bindings
-  PUBLIC zwo_asi::zwo_asi ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/x64/libASICamera2.a
+  PUBLIC zwo_asi::zwo_asi ${LIBASICAMERA_PATH}
   )
 
 ###########

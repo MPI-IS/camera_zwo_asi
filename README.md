@@ -11,7 +11,12 @@ You may find the original C++ SDK binaries and documentation [here](https://astr
 
 ## Requirements
 
-camera-zwo-asi has been tested only with python 3.10 on Ubuntu 20.04, but is likely to work with other recent version of python3 / ubuntu. Compilation on other linux based platforms is less likely to be successful. There is a short term plan to develop support for Raspberry PI. 
+camera-zwo-asi has been tested only with :
+
+- python 3.10 on Ubuntu 20.04
+- python 3.9 on raspberry pi 3 (PI OS Lite 32-bit) 
+
+but is likely to work with other recent version of python3 / ubuntu / raspberry. Compilation on other linux based platforms is less likely to be successful. 
 
 ### Dependencies
 
@@ -19,6 +24,12 @@ The following APT dependencies are required:
 
 ```bash
 apt install -y libusb-1.0-0-dev libgl1-mesa-glx  libglib2.0-dev libopencv-dev python3-dev cmake ninja-build libusb-dev
+```
+
+For raspberry, also install:
+
+```
+apt install -y libatlas-base-dev
 ```
 
 ## Installation
