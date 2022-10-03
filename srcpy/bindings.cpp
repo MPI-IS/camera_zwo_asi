@@ -85,7 +85,8 @@ PYBIND11_MODULE(bindings, m)
     .def_readonly("is_usb3",&CameraInfo::is_usb3)
     .def_readonly("elec_per_adu",&CameraInfo::elec_per_adu)
     .def_readonly("bit_depth",&CameraInfo::bit_depth)
-    .def_readonly("is_trigger",&CameraInfo::is_trigger);
+    .def_readonly("is_trigger",&CameraInfo::is_trigger)
+    .def("__str__",&CameraInfo::to_string);
     
   pybind11::class_<CameraException>(m, "CameraException")
     .def(pybind11::init<std::string,int,ASI_ERROR_CODE,bool>());
@@ -107,7 +108,6 @@ PYBIND11_MODULE(bindings, m)
     .def("set_pulse_guide_off", &Camera::set_pulse_guide_off)
     .def("enable_dark_substract", &Camera::enable_dark_substract)
     .def("disable_dark_substract", &Camera::disable_dark_substract)
-    .def("__str__", &Camera::to_string)
     .def("get_info", &Camera::get_info)
     .def("capture", &capture);
 }

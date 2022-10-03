@@ -148,3 +148,5 @@ def dump():
     camera.to_toml(path)
 
     print(f"configuration saved to {path}")
+
+
