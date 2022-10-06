@@ -50,7 +50,9 @@ class Camera(bindings.Camera):
         """
         return super().get_controls()
 
-    def configure_from_toml(self, config: typing.Union[Path,typing.Mapping[str,typing.Any]]) -> None:
+    def configure_from_toml(
+        self, config: typing.Union[Path, typing.Mapping[str, typing.Any]]
+    ) -> None:
         """
         Configure the camera using a TOML formated configuration file.
         To get an example configuration file: see the method
@@ -59,7 +61,7 @@ class Camera(bindings.Camera):
         in the TOML configuration.
         """
 
-        if isinstance(config,Path):
+        if isinstance(config, Path):
             # checking file exists
             if not config.is_file():
                 raise FileNotFoundError(
@@ -71,7 +73,7 @@ class Camera(bindings.Camera):
 
         else:
             content = config
-            
+
         # making sure it has content for both controllables and ROI
         required_keys = ("controllables", "roi")
         for rk in required_keys:
@@ -101,7 +103,12 @@ class Camera(bindings.Camera):
                 self.set_control(controllable, value)
         self.set_roi(roi)
 
-    def to_toml(self, path: Optional[Path] = None, specify_auto: bool=True) -> Optional[str]:
+    def to_toml(
+        self,
+        path: Optional[Path] = None,
+        specify_auto: bool = True,
+        non_writable: bool = False,
+    ) -> Optional[str]:
         """
         Dump the current configuration of the camera to a file. To change
         the camera's configuration, you may update
@@ -115,7 +122,7 @@ class Camera(bindings.Camera):
 
         controllables = {}
         for key, controllable in self.get_controls().items():
-            if controllable.is_writable:
+            if non_writable or controllable.is_writable:
                 if specify_auto and controllable.is_auto:
                     controllables[key] = "auto"
                 else:
@@ -221,32 +228,46 @@ class Camera(bindings.Camera):
 
         return image
 
-    def __str__(self)->str:
-
-        def _same_length(items: typing.Iterable[str])->typing.List[str]:
+    def __str__(self) -> str:
+        def _same_length(items: typing.Iterable[str]) -> typing.List[str]:
             max_len = max([len(item) for item in items])
-            return [item+" "*(max_len-len(item)) for item in items]
-        
-        def _str_control(control: Controllable)->str:
+            return [item + " " * (max_len - len(item)) for item in items]
+
+        def _str_control(control: Controllable) -> str:
             name = control.name
-            writable = "(w)" if control.is_writable else " "*3
-            auto = "(auto)" if control.is_auto else ("(as)  " if control.supports_auto else " "*6)
+            writable = "(w)" if control.is_writable else " " * 3
+            auto = (
+                "(auto)"
+                if control.is_auto
+                else ("(as)  " if control.supports_auto else " " * 6)
+            )
             return f"|{writable}{auto} {name}"
-        
+
         r = [f"asi sdk: {bindings.get_sdk_version()}"]
         r.append(str(self.get_info()))
 
         controls = self.get_controls().values()
 
-        names = _same_length(["|controllable","-"*13]+list((map(_str_control,controls))))
-        values = _same_length(["|value","-"*6]+[f"|{str(control.value)}" for control in controls])
-        mins = _same_length(["|min value","-"*10]+[f"|{str(control.min_value)}" for control in controls])
-        maxs = _same_length(["|max value","-"*10]+[f"|{str(control.max_value)}" for control in controls])
+        names = _same_length(
+            ["|controllable", "-" * 13] + list((map(_str_control, controls)))
+        )
+        values = _same_length(
+            ["|value", "-" * 6] + [f"|{str(control.value)}" for control in controls]
+        )
+        mins = _same_length(
+            ["|min value", "-" * 10]
+            + [f"|{str(control.min_value)}" for control in controls]
+        )
+        maxs = _same_length(
+            ["|max value", "-" * 10]
+            + [f"|{str(control.max_value)}" for control in controls]
+        )
 
         for name, value, min_, max_ in zip(names, values, mins, maxs):
-            r.append("\t".join([name,value,min_,max_]))
+            r.append("\t".join([name, value, min_, max_]))
 
-        r.append("|legend: (w): is writable, (auto): in auto mode, (as): auto mode not active but supported\n")
-        
+        r.append(
+            "|legend: (w): is writable, (auto): in auto mode, (as): auto mode not active but supported\n"
+        )
+
         return "\n".join(r)
-            
