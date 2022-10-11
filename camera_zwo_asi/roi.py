@@ -29,6 +29,12 @@ class ROI(bindings.ROI):
         """
         return get_image(self.type, self.width, self.height)
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        attributes = ("start_x", "start_y", "width", "height", "bins")
+        roi_d = {attr: getattr(roi, attr) for attr in attributes}
+        roi_d["type"] = roi.type.name
+        return roi_d
+
     @classmethod
     def from_toml(
         cls, content: typing.Union[Path, typing.Dict[str, typing.Any]]

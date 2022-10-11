@@ -125,10 +125,7 @@ class Camera(bindings.Camera):
         d["controllables"] = controllables
 
         roi = self.get_roi()
-        attributes = ("start_x", "start_y", "width", "height", "bins")
-        roi_d = {attr: getattr(roi, attr) for attr in attributes}
-        roi_d["type"] = roi.type.name
-        d["roi"] = roi_d
+        d["roi"] = roi.to_dict()
 
         if path is not None:
             with open(path, "w+") as f:
