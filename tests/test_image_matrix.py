@@ -11,9 +11,10 @@ class MockControl:
 
 
 class MockCamera:
-    def __init__(self):
+    def __init__(self, default_exposure: float=0.1):
         self._values: typing.Dict[str, MockControl] = {}
-
+        self._values["Exposure"]=MockControl(default_exposure)
+        
     def get_roi(self) -> zwo.ROI:
         roi = zwo.ROI()
         roi.start_x = 0
@@ -47,7 +48,7 @@ def test_iterate_ints():
     a2 = [4, 5, 6]
     a3 = [7, 8, 9]
 
-    combins = list(zwo.image_matrix._iterate_ints(a1, a2, a3))
+    combins = list(zwo.create_library._iterate_ints(a1, a2, a3))
 
     assert len(combins) == 3 * 3 * 3
 
@@ -62,9 +63,9 @@ def test_iterate_ints():
 def test_control_range_get_values():
 
     controls = {
-        "a": zwo.image_matrix.ControlRange(0, 10, 5),
-        "b": zwo.image_matrix.ControlRange(0, 3, 1),
-        "c": zwo.image_matrix.ControlRange(0, 15, 3),
+        "a": zwo.create_library.ControlRange(0, 10, 5),
+        "b": zwo.create_library.ControlRange(0, 3, 1),
+        "c": zwo.create_library.ControlRange(0, 15, 3),
     }
 
     assert controls["a"].get_values() == [0, 5, 10]
@@ -72,14 +73,14 @@ def test_control_range_get_values():
     assert controls["c"].get_values() == [0, 3, 6, 9, 12, 15]
 
 
-def test_image_matrix():
+def test_create_library():
 
     camera = MockCamera()
 
     controls = {
-        "a": zwo.image_matrix.ControlRange(0, 10, 5),
-        "b": zwo.image_matrix.ControlRange(0, 3, 1),
-        "c": zwo.image_matrix.ControlRange(0, 6, 3),
+        "a": zwo.create_library.ControlRange(0, 10, 5),
+        "b": zwo.create_library.ControlRange(0, 3, 1),
+        "c": zwo.create_library.ControlRange(0, 6, 3),
     }
 
     avg_over = 2
@@ -88,7 +89,7 @@ def test_image_matrix():
 
         path = Path(tmp) / "test.hdf5"
 
-        nb_images = zwo.image_matrix.create_hdf5(
+        nb_images = zwo.library(
             camera,
             controls,
             avg_over,
@@ -97,7 +98,7 @@ def test_image_matrix():
 
         assert nb_images == 3 * 4 * 3
 
-        with zwo.image_matrix.ImageLibrary(path) as il:
+        with zwo.create_library.ImageLibrary(path) as il:
 
             params = il.params()
             assert params["a"].min == 0

@@ -1,5 +1,4 @@
 import toml
-import typing
 import pytest
 import camera_zwo_asi
 import tempfile
@@ -36,7 +35,7 @@ def test_roi_from_dict():
             "bins": 2,
             "type": "stuff",  # !
         }
-        instance2 = camera_zwo_asi.ROI.from_toml(d)
+        camera_zwo_asi.ROI.from_toml(d)
 
     # failing instantiation: missing attribute
     with pytest.raises(Exception):
@@ -48,7 +47,7 @@ def test_roi_from_dict():
             "bins": 2,
             "type": "y8",
         }
-        instance2 = camera_zwo_asi.ROI.from_toml(d)
+        camera_zwo_asi.ROI.from_toml(d)
 
 
 def test_roi_from_file():

@@ -1,4 +1,5 @@
 import inspect
+import typing
 import os
 import sys
 from pathlib import Path
@@ -17,7 +18,8 @@ init_py = inspect.cleandoc(
     from .roi import ROI
     from .image import Image
     from .version import __version__
-    from . import image_matrix
+    from .create_library import library
+    from .image_library import ImageLibrary
 
     """
 )
@@ -29,11 +31,9 @@ if "CIBUILDWHEEL" in os.environ and os.environ["CIBUILDWHEEL"] == "1":
         CIBW_CMAKE_OPTIONS += ["-DCMAKE_INSTALL_LIBDIR=lib"]
 
 version_path = convert_path("camera_zwo_asi/version.py")
-version_dict = {}
+version_dict: typing.Dict[typing.Any, typing.Any] = {}
 with open(version_path) as version_file:
     exec(version_file.read(), version_dict)
-
-from pathlib import Path
 
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()

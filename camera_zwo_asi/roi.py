@@ -1,9 +1,8 @@
 import toml
 import typing
-import numpy as np
 from pathlib import Path
 from camera_zwo_asi import bindings
-from .image import FlattenData, ImageData, Image, get_image
+from .image import Image, get_image
 
 
 class ROI(bindings.ROI):
@@ -56,7 +55,7 @@ class ROI(bindings.ROI):
             d = content
 
         required_keys = ("start_x", "start_y", "width", "height", "bins", "type")
-        missing_keys = [rk for rk in required_keys if not rk in d]
+        missing_keys = [rk for rk in required_keys if rk not in d]
         if missing_keys:
             missing_str = ", ".join(missing_keys)
             raise ValueError(

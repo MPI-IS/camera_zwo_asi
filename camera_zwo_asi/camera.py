@@ -1,7 +1,7 @@
 import typing
 import toml
 from pathlib import Path
-from typing import Optional, Mapping, List, Dict
+from typing import Optional, List, Dict
 from camera_zwo_asi import bindings
 from .roi import ROI
 from .image import Image
@@ -22,7 +22,7 @@ class Camera(bindings.Camera):
 
         # no idea why, camera may not be detected if this is not
         # called first
-        nb_detected_cams = bindings.get_nb_cameras()
+        bindings.get_nb_cameras()
         super().__init__(index)
 
     def set_control(self, controllable: str, value: typing.Union[int, str]) -> None:
@@ -61,7 +61,7 @@ class Camera(bindings.Camera):
         """
 
         content: typing.Mapping[str, typing.Any]
-        
+
         if isinstance(config, Path):
             # checking file exists
             if not config.is_file():
@@ -87,10 +87,7 @@ class Camera(bindings.Camera):
         controllables = content["controllables"]
 
         # reading values from ROI
-        roi = typing.cast(
-            ROI,
-            ROI.from_toml(content["roi"])
-        )
+        roi = typing.cast(ROI, ROI.from_toml(content["roi"]))
         issues = roi.check(self.get_info())
         if issues:
             issues_str = ", ".join(issues)
