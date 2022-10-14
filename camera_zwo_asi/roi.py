@@ -31,8 +31,8 @@ class ROI(bindings.ROI):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         attributes = ("start_x", "start_y", "width", "height", "bins")
-        roi_d = {attr: getattr(roi, attr) for attr in attributes}
-        roi_d["type"] = roi.type.name
+        roi_d = {attr: getattr(self, attr) for attr in attributes}
+        roi_d["type"] = self.type.name
         return roi_d
 
     @classmethod
@@ -49,7 +49,7 @@ class ROI(bindings.ROI):
         if isinstance(content, Path):
             if not content.is_file():
                 raise FileNotFoundError(
-                    f"failed to create an instance of ROI from {path}: file not found"
+                    f"failed to create an instance of ROI from {content}: file not found"
                 )
             d = toml.load(content)
         else:
@@ -113,7 +113,7 @@ class ROI(bindings.ROI):
             )
             issues.append(
                 "Image type {} not supported (supported: {}".format(
-                    image_type, supported_types
+                    self.type, supported_types
                 )
             )
 

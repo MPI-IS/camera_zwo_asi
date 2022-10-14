@@ -2,6 +2,7 @@ from collections import OrderedDict
 import copy
 import itertools
 from pathlib import Path
+import toml
 import time
 import h5py
 import typing
@@ -92,7 +93,7 @@ class ControlRange:
                     int(config[key]) for key in required_keys
                 ]
             except ValueError as e:
-                raise ValuerError(
+                raise ValueError(
                     f"error with darkframes configuration file {path}, "
                     f"controllable {name}: "
                     f"failed to cast value to int ({e})"
@@ -111,7 +112,7 @@ class ControlRange:
                     f"missing key '{rk}'"
                 )
 
-        roi = ROI.from_toml(content["ROI"])
+        roi = typing.cast(ROI, ROI.from_toml(content["ROI"]))
         try:
             avg_over = int(content["average_over"])
         except ValueError as e:
@@ -128,7 +129,7 @@ class ControlRange:
         )
 
     @classmethod
-    def generate_config_file(path: Path) -> None:
+    def generate_config_file(cls, camera: Camera, path: Path) -> None:
         """
         Generate a toml configuration file with reasonable
         default values. User can edit this file and then call
@@ -176,8 +177,8 @@ def _iterate_controls(
     return _iterate_ints(*all_values)
 
 
-def _get_measure_control(camera: Camera, control: str) -> str:
-    if controllable == "TargetTemp":
+def _get_measure_control(camera: Camera, control: str) -> int:
+    if control == "TargetTemp":
         return int(camera.get_controls()["Temperature"].value / 10.0 + 0.5)
     return camera.get_controls()[control].value
 
@@ -198,20 +199,19 @@ def _set_control(
 
 
 def _estimate_duration(
-        controls: typing.Dict[str,int],
-        exposure: typing.Optional[float]=None
-)->float:
+    controls: typing.Dict[str, int], exposure: typing.Optional[float] = None
+) -> float:
     try:
-        duration = controls["Exposure"]/1e6
+        duration = controls["Exposure"] / 1e6
     except KeyError:
         duration = exposure
-    return duration * avg_over
-    
+    return duration
+
 
 def estimate_total_duration(
-        camera: Camera,
-        control_ranges: OrderedDict[str, ControlRange],
-        avg_over: int,
+    camera: Camera,
+    control_ranges: OrderedDict[str, ControlRange],
+    avg_over: int,
 ) -> typing.Tuple[int, int]:
     """
     Return an estimation of how long capturing all darkframes will
@@ -241,7 +241,7 @@ def estimate_total_duration(
         return len(all_controls) * avg_over * exposure, nb_pics
 
     exposure = camera.get_controls()["Exposure"].value
-    
+
     return (
         sum([ac[exp_index] / 1e6 for ac in all_controls]) * avg_over * exposure,
         nb_pics,
@@ -249,17 +249,17 @@ def estimate_total_duration(
 
 
 def _add_to_hdf5(
-        camera: Camera,
-        controls: typing.Dict[str, int],
-        hdf5_file: h5py.File,
-        avg_over: int,
-        timeouts: typing.List[float],
-        thresholds: typing.List[int],
-        previous_controls: typing.Optional[typing.Dict[str, int]] = None,
-        progress: typing.Optional[alive_progress.core.progress.__AliveBarHandle] = None,
-        current_nb_pics: typing.Optional[int] = None
-        total_nb_pics: typing.Optional[int] = None    
-) -> None:
+    camera: Camera,
+    controls: typing.Dict[str, int],
+    hdf5_file: h5py.File,
+    avg_over: int,
+    timeouts: typing.List[float],
+    thresholds: typing.List[int],
+    previous_controls: typing.Optional[typing.Dict[str, int]] = None,
+    progress: typing.Optional[alive_progress.core.progress.__AliveBarHandle] = None,
+    current_nb_pics: typing.Optional[int] = None,
+    total_nb_pics: typing.Optional[int] = None,
+) -> typing.Optional[int]:
     """
     Has the camera take images, average them and adds this averaged image
     to the hdf5 file, with 'path'
@@ -271,7 +271,7 @@ def _add_to_hdf5(
         exposure = camera.get_controls()["Exposure"].value / 1e6
     else:
         exposure = controls["Exposure"] / 1e6
-    
+
     # setting the configuration
     for index, (control, value) in enumerate(controls.items()):
         if previous_controls is None or previous_controls[control] != value:
@@ -290,6 +290,11 @@ def _add_to_hdf5(
         images.append[camera.capture().get_data()]
         if progress:
             progress(exposure)
+            try:
+                current_nb_pics += 1
+            except:
+                current_nb_pics = 1
+            printf(f"taking pictures {current_nb_pics}/{total_nb_pics}")
     image = np.mean(images, axis=0)
 
     # adding the image to the hdf5 file
@@ -301,22 +306,26 @@ def _add_to_hdf5(
     # add the camera current configuration to the group
     group.attrs["camera_config"] = camera.to_toml()
 
+    return current_nb_pics
+
 
 class _no_progress:
     def __init__(self, _, dual_line=None, title=None):
         pass
+
     def __enter__(self):
         return None
-    def __exit__(self,_,__,___):
+
+    def __exit__(self, _, __, ___):
         pass
-    
+
 
 def create_hdf5(
     camera: Camera,
     controls: OrderedDict[str, ControlRange],
     avg_over: int,
     hdf5_path: Path,
-    progress: bool = True
+    progress: bool = True,
 ) -> int:
     """
     Create an hdf5 image library file, by taking pictures using
@@ -325,17 +334,18 @@ def create_hdf5(
     Images can be accessed using instances of 'ImageLibrary'.
     """
 
-    total_duration, total_nb_pics = estimate_total_duration(
-        camera, controls, avg_over
-    )
+    total_duration, total_nb_pics = estimate_total_duration(camera, controls, avg_over)
+    current_nb_pics = 0
 
     if progress:
         progress_class = alive_bar
     else:
         progress_class = _no_progress
 
-    with progress_class(total_duration, dual_line=True, title='image database creation') as progress_bar:
-    
+    with progress_class(
+        total_duration, dual_line=True, title="image database creation"
+    ) as progress_bar:
+
         timeouts = [control.timeout for control in controls.values()]
         thresholds = [control.threshold for control in controls.values()]
 
@@ -361,14 +371,20 @@ def create_hdf5(
                 values_dict = {
                     control: value for control, value in zip(controls.keys(), values)
                 }
-                _add_to_hdf5(
-                    camera, values_dict, hdf5_file,
-                    avg_over, timeouts, thresholds,
-                    progress = progress_bar
+                current_nb_pics = _add_to_hdf5(
+                    camera,
+                    values_dict,
+                    hdf5_file,
+                    avg_over,
+                    timeouts,
+                    thresholds,
+                    progress=progress_bar,
+                    current_nb_pics=current_nb_pics,
+                    total_nb_pics=total_nb_pics,
                 )
                 nb_images += 1
 
-            return nb_images
+    return nb_images
 
 
 def _get_closest(value: int, values: typing.List[int]) -> int:

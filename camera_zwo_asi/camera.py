@@ -3,7 +3,6 @@ import toml
 from pathlib import Path
 from typing import Optional, Mapping, List, Dict
 from camera_zwo_asi import bindings
-from camera_zwo_asi.bindings import Controllable, Camera, get_nb_cameras
 from .roi import ROI
 from .image import Image
 
@@ -23,7 +22,7 @@ class Camera(bindings.Camera):
 
         # no idea why, camera may not be detected if this is not
         # called first
-        nb_detected_cams = get_nb_cameras()
+        nb_detected_cams = bindings.get_nb_cameras()
         super().__init__(index)
 
     def set_control(self, controllable: str, value: typing.Union[int, str]) -> None:
@@ -44,7 +43,7 @@ class Camera(bindings.Camera):
             return
         super().set_control(controllable, value)
 
-    def get_controls(self) -> typing.Dict[str, Controllable]:
+    def get_controls(self) -> typing.Dict[str, bindings.Controllable]:
         """
         Returns the current values of all controllables
         """
@@ -61,6 +60,8 @@ class Camera(bindings.Camera):
         in the TOML configuration.
         """
 
+        content: typing.Mapping[str, typing.Any]
+        
         if isinstance(config, Path):
             # checking file exists
             if not config.is_file():
@@ -79,14 +80,17 @@ class Camera(bindings.Camera):
         for rk in required_keys:
             if rk not in content:
                 raise ValueError(
-                    f"toml camera configuration file {path} is missing the key {rk}"
+                    f"toml camera configuration file {content} is missing the key {rk}"
                 )
 
         # reading values for controllables
         controllables = content["controllables"]
 
         # reading values from ROI
-        roi = ROI.from_toml(content["roi"])
+        roi = typing.cast(
+            ROI,
+            ROI.from_toml(content["roi"])
+        )
         issues = roi.check(self.get_info())
         if issues:
             issues_str = ", ".join(issues)
@@ -130,6 +134,7 @@ class Camera(bindings.Camera):
         if path is not None:
             with open(path, "w+") as f:
                 toml.dump(d, f)
+            return None
         else:
             return toml.dumps(d)
 
@@ -143,7 +148,7 @@ class Camera(bindings.Camera):
             setattr(roi, attr, getattr(bindings_roi, attr))
         return roi
 
-    def _check_controllable(self, controllable: Controllable) -> Optional[str]:
+    def _check_controllable(self, controllable: bindings.Controllable) -> Optional[str]:
         """
         Check if the controllable is suitable, i.e. can be used to configure
         the camera.
@@ -158,7 +163,9 @@ class Camera(bindings.Camera):
             return f"controllable {controllable.name} has value {controllable.value} < min value {controllable.min_value}"
         return None
 
-    def configure(self, roi: ROI, controllables: Dict[str, Controllable]) -> None:
+    def configure(
+        self, roi: ROI, controllables: Dict[str, bindings.Controllable]
+    ) -> None:
         """
         Configure the camera, setting up the ROI (Region Of Interest) and
         values for the controllable.
