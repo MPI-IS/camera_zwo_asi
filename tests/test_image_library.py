@@ -94,11 +94,12 @@ def test_create_library():
             controls,
             avg_over,
             path,
+            progress = False
         )
 
         assert nb_images == 3 * 4 * 3
 
-        with zwo.create_library.ImageLibrary(path) as il:
+        with zwo.ImageLibrary(path) as il:
 
             params = il.params()
             assert params["a"].min == 0
@@ -144,3 +145,30 @@ def test_create_library():
                     f"substracting an image from the library "
                     f"to a new image raised an exception: {e}"
                 )
+
+def test_create_library_with_exposure():
+
+    camera = MockCamera()
+
+    controls = {
+        "a": zwo.create_library.ControlRange(0, 10, 5),
+        "Exposure": zwo.create_library.ControlRange(1000, 2000, 500),
+        "c": zwo.create_library.ControlRange(0, 6, 3),
+    }
+
+    avg_over = 2
+
+    with tempfile.TemporaryDirectory() as tmp:
+
+        path = Path(tmp) / "test.hdf5"
+
+        nb_images = zwo.library(
+            camera,
+            controls,
+            avg_over,
+            path,
+            progress = False
+        )
+
+
+                

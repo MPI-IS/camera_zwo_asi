@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import datetime
 import itertools
 import alive_progress
 from pathlib import Path
@@ -57,7 +58,7 @@ def estimate_total_duration(
     control_ranges: OrderedDict[str, ControlRange],
     avg_over: int,
     exposure: typing.Optional[float] = None
-) -> typing.Tuple[float, int]:
+) -> typing.Tuple[int, int]:
     """
     Return an estimation of how long capturing all darkframes will
     take (in seconds). If "Exposure" is in the control range,
@@ -72,7 +73,7 @@ def estimate_total_duration(
 
     controls = list(control_ranges.keys())
     if "Exposure" in controls:
-        exp_index = controls.index("Exposture")
+        exp_index = controls.index("Exposure")
     else:
         exp_index = None
 
@@ -83,10 +84,14 @@ def estimate_total_duration(
     nb_pics = len(all_controls) * avg_over
 
     if exp_index is None:
-        exposure = camera.get_controls()["Exposure"].value / 1e6
+        exposure = camera.get_controls()["Exposure"].value
+        if exposure is None:
+            raise ValueError(
+                f"failed to read the exposure value from the camera"
+            )
         return len(all_controls) * avg_over * exposure, nb_pics
 
-    return (sum([ac[exp_index] / 1e6 for ac in all_controls]) * avg_over, nb_pics)
+    return (sum([ac[exp_index] for ac in all_controls]) * avg_over, nb_pics)
 
 
 def _add_to_hdf5(
@@ -109,9 +114,9 @@ def _add_to_hdf5(
     """
 
     if "Exposure" not in controls.keys():
-        exposure = camera.get_controls()["Exposure"].value / 1e6
+        exposure = camera.get_controls()["Exposure"].value 
     else:
-        exposure = controls["Exposure"] / 1e6
+        exposure = controls["Exposure"] 
 
     # setting the configuration
     for index, (control, value) in enumerate(controls.items()):
@@ -128,14 +133,24 @@ def _add_to_hdf5(
     # taking and averaging the pictures
     images: typing.List[FlattenData] = []
     for _ in range(avg_over):
+        if progress is not None:
+            str_controls = ", ".join(
+                [
+                    f"{key}: {value}"
+                    for key,value in current_controls.items()
+                ]
+            )
+            progress.text = str(
+                f"taking picture {current_nb_pics}/{total_nb_pics} "
+                f"({str_controls})"
+            )
         images.append(camera.capture().get_data())
-        if progress:
+        if progress is not None:
             progress(exposure)
             if current_nb_pics is not None:
                 current_nb_pics += 1
             else:
                 current_nb_pics = 1
-            print(f"taking pictures {current_nb_pics}/{total_nb_pics}")
     image = np.mean(images, axis=0)
 
     # adding the image to the hdf5 file
@@ -161,6 +176,19 @@ class _no_progress:
         pass
 
 
+def _inform_user(total_duration: int, total_nb_pics: int)->None:
+    seconds = int(total_duration/1e6 + 0.5)
+    time_now = datetime.datetime.now()
+    time_delta = datetime.timedelta(seconds=seconds)
+    time_finished = time_now + time_delta
+    format_ = "%m/%d/%Y, %H:%M:%S"
+    print(f"\nTaking {total_nb_pics} pictures in {seconds} "
+          f"({total_duration} seconds).\n"
+          f"Time now: {time_now.strftime(format_)}. "
+          f"Expected to finish at: {time_finished.strftime(format_)}.\n"
+    )
+    
+
 def library(
     camera: Camera,
     controls: OrderedDict[str, ControlRange],
@@ -176,9 +204,11 @@ def library(
     """
 
     total_duration, total_nb_pics = estimate_total_duration(camera, controls, avg_over)
+    
     current_nb_pics: typing.Optional[int] = 0
 
     if progress:
+        _inform_user(total_duration, total_nb_pics)
         progress_class = alive_progress.alive_bar
     else:
         progress_class = _no_progress

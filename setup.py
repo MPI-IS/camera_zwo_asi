@@ -20,7 +20,7 @@ init_py = inspect.cleandoc(
     from .version import __version__
     from .create_library import library
     from .image_library import ImageLibrary
-
+    from .control_range import ControlRange
     """
 )
 

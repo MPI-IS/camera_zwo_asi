@@ -6,6 +6,7 @@ requires = [
     "cmake_build_extension",
     "pybind11",
     "ninja",
+    "alive_progress"
 ]
 build-backend = "setuptools.build_meta"
 
