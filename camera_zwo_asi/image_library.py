@@ -1,11 +1,6 @@
 import typing
 import h5py
-from .image import (
-    FlattenData,
-    ImageType,
-    Image,
-    get_image_class
-)
+from .image import FlattenData, ImageType, Image, get_image_class
 from pathlib import Path
 from .control_range import ControlRange
 
@@ -64,6 +59,17 @@ class ImageLibrary:
         """
         return eval(self._hdf5_file.attrs["controls"])
 
+    def name(self)->str:
+        """
+        Returns the name of the library, which is an arbitrary 
+        string passed as argument by the user when creating the 
+        library.
+        """
+        try:
+            return self._hdf5_file.attrs['name']
+        except KeyError:
+            return '(not named)'
+        
     def image_type(self) -> ImageType:
         """
         The type of the images stored in the library

@@ -31,14 +31,18 @@ class ControlRange:
 
     def __init__(
         self,
-        min: int,
-        max: int,
+        min_: int,
+        max_: int,
         step: int,
         threshold: int = 0,
         timeout: float = 0.1,
     ) -> None:
-        self.min = min
-        self.max = max
+        if not isinstance(min_, int):
+            raise ValueError(f"Control range: min value ({min_}) must be an integer")
+        if not isinstance(max_, int):
+            raise ValueError(f"Control range: max value ({max_}) must be an integer")
+        self.min = min_
+        self.max = max_
         self.step = step
         self.threshold = threshold
         self.timeout = timeout
@@ -53,6 +57,15 @@ class ControlRange:
         """
         return list(range(self.min, self.max + 1, self.step))
 
+    def __str__(self, name: typing.Optional[str]=None):
+        if name is None:
+            name = ""
+        else:
+            name = f"{name}:\t"
+        return str(
+            f"{name}{repr(self.get_values)}"
+        )
+    
     def __repr__(self) -> str:
         return str(
             f"ControlRange({self.min},{self.max}, "
@@ -135,6 +148,7 @@ class ControlRange:
                 f"directory {path.parent} not found"
             )
         r: typing.Dict[str, typing.Any] = {}
+        r["average_over"] = 5
         roi = camera.get_roi().to_dict()
         r["ROI"] = roi
         control_ranges = {

@@ -11,10 +11,10 @@ class MockControl:
 
 
 class MockCamera:
-    def __init__(self, default_exposure: float=0.1):
+    def __init__(self, default_exposure: float = 0.1):
         self._values: typing.Dict[str, MockControl] = {}
-        self._values["Exposure"]=MockControl(default_exposure)
-        
+        self._values["Exposure"] = MockControl(default_exposure)
+
     def get_roi(self) -> zwo.ROI:
         roi = zwo.ROI()
         roi.start_x = 0
@@ -89,13 +89,7 @@ def test_create_library():
 
         path = Path(tmp) / "test.hdf5"
 
-        nb_images = zwo.library(
-            camera,
-            controls,
-            avg_over,
-            path,
-            progress = False
-        )
+        nb_images = zwo.library(camera, controls, avg_over, path, progress=False)
 
         assert nb_images == 3 * 4 * 3
 
@@ -146,6 +140,7 @@ def test_create_library():
                     f"to a new image raised an exception: {e}"
                 )
 
+
 def test_create_library_with_exposure():
 
     camera = MockCamera()
@@ -162,13 +157,4 @@ def test_create_library_with_exposure():
 
         path = Path(tmp) / "test.hdf5"
 
-        nb_images = zwo.library(
-            camera,
-            controls,
-            avg_over,
-            path,
-            progress = False
-        )
-
-
-                
+        nb_images = zwo.library(camera, controls, avg_over, path, progress=False)

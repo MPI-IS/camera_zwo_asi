@@ -57,7 +57,7 @@ def estimate_total_duration(
     camera: Camera,
     control_ranges: OrderedDict[str, ControlRange],
     avg_over: int,
-    exposure: typing.Optional[float] = None
+    exposure: typing.Optional[int] = None,
 ) -> typing.Tuple[int, int]:
     """
     Return an estimation of how long capturing all darkframes will
@@ -86,9 +86,7 @@ def estimate_total_duration(
     if exp_index is None:
         exposure = camera.get_controls()["Exposure"].value
         if exposure is None:
-            raise ValueError(
-                f"failed to read the exposure value from the camera"
-            )
+            raise ValueError(f"failed to read the exposure value from the camera")
         return len(all_controls) * avg_over * exposure, nb_pics
 
     return (sum([ac[exp_index] for ac in all_controls]) * avg_over, nb_pics)
@@ -114,9 +112,9 @@ def _add_to_hdf5(
     """
 
     if "Exposure" not in controls.keys():
-        exposure = camera.get_controls()["Exposure"].value 
+        exposure = camera.get_controls()["Exposure"].value
     else:
-        exposure = controls["Exposure"] 
+        exposure = controls["Exposure"]
 
     # setting the configuration
     for index, (control, value) in enumerate(controls.items()):
@@ -135,14 +133,10 @@ def _add_to_hdf5(
     for _ in range(avg_over):
         if progress is not None:
             str_controls = ", ".join(
-                [
-                    f"{key}: {value}"
-                    for key,value in current_controls.items()
-                ]
+                [f"{key}: {value}" for key, value in current_controls.items()]
             )
             progress.text = str(
-                f"taking picture {current_nb_pics}/{total_nb_pics} "
-                f"({str_controls})"
+                f"taking picture {current_nb_pics}/{total_nb_pics} " f"({str_controls})"
             )
         images.append(camera.capture().get_data())
         if progress is not None:
@@ -176,35 +170,40 @@ class _no_progress:
         pass
 
 
-def _inform_user(total_duration: int, total_nb_pics: int)->None:
-    seconds = int(total_duration/1e6 + 0.5)
+def _inform_user(total_duration: int, total_nb_pics: int) -> None:
+    seconds = int(total_duration / 1e6 + 0.5)
     time_now = datetime.datetime.now()
     time_delta = datetime.timedelta(seconds=seconds)
     time_finished = time_now + time_delta
     format_ = "%m/%d/%Y, %H:%M:%S"
-    print(f"\nTaking {total_nb_pics} pictures in {seconds} "
-          f"({total_duration} seconds).\n"
-          f"Time now: {time_now.strftime(format_)}. "
-          f"Expected to finish at: {time_finished.strftime(format_)}.\n"
+    print(
+        f"\nTaking {total_nb_pics} pictures in {time_delta} "
+        f"({seconds} seconds).\n"
+        f"Time now: {time_now.strftime(format_)}. "
+        f"Expected to finish at: {time_finished.strftime(format_)}.\n"
     )
-    
+
 
 def library(
-    camera: Camera,
-    controls: OrderedDict[str, ControlRange],
-    avg_over: int,
-    hdf5_path: Path,
-    progress: bool = True,
+        name: str,
+        camera: Camera,
+        controls: OrderedDict[str, ControlRange],
+        avg_over: int,
+        hdf5_path: Path,
+        progress: bool = True,
 ) -> int:
     """
     Create an hdf5 image library file, by taking pictures using
     the specified configuration range. For each configuration,
     'avg_over' pictures are taken and averaged.
     Images can be accessed using instances of 'ImageLibrary'.
+    'name' is a (possibly unique) arbitrary string, 
+    used for identification of the file (can be, for example, 
+    the serial number of the camera used to take the frames).
     """
 
     total_duration, total_nb_pics = estimate_total_duration(camera, controls, avg_over)
-    
+
     current_nb_pics: typing.Optional[int] = 0
 
     if progress:
@@ -223,9 +222,12 @@ def library(
         # opening the hdf5 file in write mode
         with h5py.File(hdf5_path, "w") as hdf5_file:
 
+            # adding the name to the hdf5 file
+            hdf5_file.attrs["name"] = name
+            
             # adding the controls to the hdf5 file
             hdf5_file.attrs["controls"] = repr(controls)
-
+            
             # adding the file format, width and height to the hdf5 file
             roi = camera.get_roi()
             hdf5_file.attrs["image_type"] = str(roi.type)
