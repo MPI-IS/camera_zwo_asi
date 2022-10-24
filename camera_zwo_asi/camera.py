@@ -103,6 +103,34 @@ class Camera(bindings.Camera):
                 self.set_control(controllable, value)
         self.set_roi(roi)
 
+    def to_dict(
+            self,
+            specify_auto: bool = True,
+            non_writable: bool = False,
+    )->typing.Dict[str,typing.Any]:
+        """
+        Return a dictionary representation of the 
+        current configuration of the camera, with the
+        keys "roi" and the key "controllables".
+        """
+        d: typing.Dict[str,typing.Any] = {}
+        controllables: typing.Dict[str,typing.Any] = {}
+        for key, controllable in self.get_controls().items():
+            if non_writable or controllable.is_writable:
+                if specify_auto and controllable.is_auto:
+                    controllables[key] = "auto"
+                else:
+                    controllables[key] = controllable.value
+        d["controllables"] = controllables
+
+        roi = self.get_roi()
+        attributes = ("start_x", "start_y", "width", "height", "bins")
+        roi_d = {attr: getattr(roi, attr) for attr in attributes}
+        roi_d["type"] = roi.type.name
+        d["roi"] = roi_d
+
+        return d
+        
     def to_toml(
         self,
         path: Optional[Path] = None,
@@ -118,7 +146,7 @@ class Camera(bindings.Camera):
           a toml formatted string if path is None, else None
         """
 
-        d = {}
+        d = self.to_dict(specify_auto, non_writable)
 
         controllables = {}
         for key, controllable in self.get_controls().items():
