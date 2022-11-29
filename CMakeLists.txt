@@ -31,6 +31,8 @@ find_package(Threads REQUIRED)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "armv7")
   set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv7/libASICamera2.a)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv8/libASICamera2.a)
 else()
   set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/x64/libASICamera2.a)
 endif()
