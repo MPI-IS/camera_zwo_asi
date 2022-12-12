@@ -79,7 +79,7 @@ class Camera(bindings.Camera):
         for rk in required_keys:
             if rk not in content:
                 raise ValueError(
-                    f"toml camera configuration file {path} is missing the key {rk}"
+                    f"toml camera configuration {config} is missing the key {rk}"
                 )
 
         # reading values for controllables
