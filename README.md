@@ -40,6 +40,8 @@ apt install -y libatlas-base-dev
 pip install camera-zwo-asi
 ```
 
+If this does not work out, try from source (see right below).
+
 ### from source
 
 ```bash
