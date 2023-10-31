@@ -6,7 +6,7 @@ python wrapper over ZWO astronomical cameras
 ## What is it
 
 camera-zwo-asi is a python wrapper of the C++ SDK as provided by [ZWO](https://astronomy-imaging-camera.com/). It provides a python object oriented interface for interacting with ZWO astronomical cameras. 
-The version of SDK currently binded is 1.24.
+The version of SDK currently binded is 1.31.
 You may find the original C++ SDK binaries and documentation [here](https://astronomy-imaging-camera.com/software-drivers).
 
 ## Requirements
@@ -15,6 +15,7 @@ camera-zwo-asi has been tested only with :
 
 - python 3.10 on Ubuntu 20.04
 - python 3.9 on raspberry pi 3 (PI OS Lite 32-bit) 
+- python 3.11 on MacOS 14.1 (x64 only)
 
 but is likely to work with other recent version of python3 / ubuntu / raspberry. Compilation on other linux based platforms is less likely to be successful. 
 
@@ -23,13 +24,26 @@ but is likely to work with other recent version of python3 / ubuntu / raspberry.
 The following APT dependencies are required:
 
 ```bash
-apt install -y libusb-1.0-0-dev libgl1-mesa-glx  libglib2.0-dev libopencv-dev python3-dev cmake ninja-build libusb-dev
+apt install -y libusb-1.0-0-dev libgl1-mesa-glx  libglib2.0-dev libopencv-dev python3-dev cmake ninja-build
 ```
 
 For raspberry, also install:
 
 ```
 apt install -y libatlas-base-dev
+```
+
+#### MacOS
+
+Currently, the ASI library is not available for aarch64 on MacOS, so Apple Silicon users will have to run the x86 version through Rosetta 2.
+The easiest way to do this is using the conda-forge channel on the Conda package management system:
+
+```bash
+conda create -n asi
+conda activate asi
+conda config --env --add channels conda-forge
+conda config --env --set subdir osx-64 # Ensures all future operations use the correct package directory. Can skip this line on Intel systems.
+conda install python=3.11 libusb pkg-config # pkg-config needed to find libusb correctly
 ```
 
 ## Installation
