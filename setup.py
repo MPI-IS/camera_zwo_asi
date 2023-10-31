@@ -24,7 +24,7 @@ init_py = inspect.cleandoc(
 CIBW_CMAKE_OPTIONS = [] # type: ignore
 if "CIBUILDWHEEL" in os.environ and os.environ["CIBUILDWHEEL"] == "1":
 
-    if sys.platform == "linux":
+    if sys.platform in ("linux", "darwin"):
         CIBW_CMAKE_OPTIONS += ["-DCMAKE_INSTALL_LIBDIR=lib"]
 
 version_path = convert_path('camera_zwo_asi/version.py')

@@ -15,6 +15,7 @@ camera-zwo-asi has been tested only with :
 
 - python 3.10 on Ubuntu 20.04
 - python 3.9 on raspberry pi 3 (PI OS Lite 32-bit) 
+- python 3.11 on MacOS 14.1 (x64 only)
 
 but is likely to work with other recent version of python3 / ubuntu / raspberry. Compilation on other linux based platforms is less likely to be successful. 
 
@@ -30,6 +31,19 @@ For raspberry, also install:
 
 ```
 apt install -y libatlas-base-dev
+```
+
+#### MacOS
+
+Currently, the ASI library is not available for aarch64 on MacOS, so Apple Silicon users will have to run the x86 version through Rosetta 2.
+The easiest way to do this is using the conda-forge channel on the Conda package management system:
+
+```bash
+conda create -n asi
+conda activate asi
+conda config --env --add channels conda-forge
+conda config --env --set subdir osx-64 # Ensures all future operations use the correct package directory. Can skip this line on Intel systems.
+conda install python=3.11 libusb pkg-config # pkg-config needed to find libusb correctly
 ```
 
 ## Installation
