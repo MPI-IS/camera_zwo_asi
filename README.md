@@ -6,7 +6,7 @@ python wrapper over ZWO astronomical cameras
 ## What is it
 
 camera-zwo-asi is a python wrapper of the C++ SDK as provided by [ZWO](https://astronomy-imaging-camera.com/). It provides a python object oriented interface for interacting with ZWO astronomical cameras. 
-The version of SDK currently binded is 1.24.
+The version of SDK currently binded is 1.31.
 You may find the original C++ SDK binaries and documentation [here](https://astronomy-imaging-camera.com/software-drivers).
 
 ## Requirements
@@ -23,7 +23,7 @@ but is likely to work with other recent version of python3 / ubuntu / raspberry.
 The following APT dependencies are required:
 
 ```bash
-apt install -y libusb-1.0-0-dev libgl1-mesa-glx  libglib2.0-dev libopencv-dev python3-dev cmake ninja-build libusb-dev
+apt install -y libusb-1.0-0-dev libgl1-mesa-glx  libglib2.0-dev libopencv-dev python3-dev cmake ninja-build
 ```
 
 For raspberry, also install:
