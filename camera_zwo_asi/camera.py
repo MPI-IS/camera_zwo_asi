@@ -60,7 +60,8 @@ class Camera(bindings.Camera):
         To request a controllable to be automatically set, use the string 'auto'
         in the TOML configuration.
         """
-
+        if isinstance(config,str):
+            config = Path(config)
         if isinstance(config, Path):
             # checking file exists
             if not config.is_file():
