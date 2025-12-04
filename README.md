@@ -18,6 +18,8 @@ camera-zwo-asi has been tested only with :
 
 but is likely to work with other recent version of python3 / ubuntu / raspberry. Compilation on other linux based platforms is less likely to be successful. 
 
+For an older version of this package which used to work on previous versions of python, raspberry pi 3 and 4; as well as on ubuntu 20.04; check the `py3.6/3.10-rpi3/4` branch.
+
 ### Dependencies
 
 The following APT dependencies are required:
