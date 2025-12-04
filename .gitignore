@@ -6,3 +6,4 @@ dist
 99-asi.rules
 zwo_asi.toml
 *__pycache__
+venv

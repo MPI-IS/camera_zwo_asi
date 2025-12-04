@@ -56,7 +56,9 @@ PYBIND11_MODULE(bindings, m)
     .def_readwrite("value",&Controllable::value)
     .def_readonly("is_writable",&Controllable::is_writable)
     .def_readwrite("is_auto",&Controllable::is_auto)
-    .def_readonly("supports_auto",&Controllable::supports_auto);
+    .def_readonly("supports_auto",&Controllable::supports_auto)
+    .def_readonly("error",&Controllable::error)
+    .def_readonly("error_code",&Controllable::error_code);
 
   pybind11::class_<ROI>(m,"ROI")
     .def(pybind11::init<>())

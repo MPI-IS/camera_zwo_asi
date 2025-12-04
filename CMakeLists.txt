@@ -16,34 +16,38 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake
                       ${CMAKE_MODULE_PATH})
 
-
-find_package(Python3 COMPONENTS Interpreter Development)
+# Find Python and pybind11 with Development component to get include dirs and site-packages locations
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(pybind11 REQUIRED)
-find_package(Python3 COMPONENTS Interpreter)
 find_package(USB REQUIRED)
 find_package(Threads REQUIRED)
-
 
 #####################################
 # armv7 or x64 or ... zwo library ? #
 #####################################
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "armv6")
-  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv6/libASICamera2.a)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "armv7")
-  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv7/libASICamera2.a)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "armv8")
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-march=armv6" ARM_HAS_ARMV6)
+check_cxx_compiler_flag("-march=armv7-a" ARM_HAS_ARMV7)
+check_cxx_compiler_flag("-march=armv8-a" ARM_HAS_ARMV8A)
+check_cxx_compiler_flag("-march=i686" X86_HAS_I686)
+check_cxx_compiler_flag("-march=x86_64" X64_HAS_X86_64)
+if(ARM_HAS_ARMV8A)
   set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv8/libASICamera2.a)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-  # confusing ! but that works on Raspberry Pi4 Model B Rev 1.5 (call: cat /proc/cpuinfo)
+elseif(ARM_HAS_ARMV7)
   set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv7/libASICamera2.a)
+elseif(ARM_HAS_ARMV6)
+  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/armv6/libASICamera2.a)
+elseif(X64_HAS_X86_64)
+  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/x64/libASICamera2.a)
+elseif(X86_HAS_I686)
+  set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/x86/libASICamera2.a)
 else()
   set(LIBASICAMERA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/asi_libs/x64/libASICamera2.a)
 endif()
 
-
 ###################################################
-# zwo_asi: library for higher level calls to the #
+# zwo_asi: library for higher level calls to the  #
 # ZWO library                                     #
 ###################################################
 
@@ -60,52 +64,52 @@ add_library(zwo_asi
   src/camera_mode.cpp
   src/guide_direction.cpp
   src/camera.cpp
-  )
+)
 add_library(zwo_asi::zwo_asi ALIAS zwo_asi)
 target_include_directories(zwo_asi PUBLIC
-   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-   ${ASI_INCLUDE_DIR} 
-   )
- target_link_libraries(zwo_asi ${LIBASICAMERA_PATH} ${LIBUSB_LIBRARIES} Threads::Threads)
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  ${ASI_INCLUDE_DIR}
+)
+target_link_libraries(zwo_asi ${LIBASICAMERA_PATH} ${LIBUSB_LIBRARIES} Threads::Threads)
 
 #################################
-# python bindings over zwo_asi #
+# python bindings over zwo_asi  #
 #################################
 
 if(CALL_FROM_SETUP_PY)
-    set(ASI_CAMS_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+  set(ASI_CAMS_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 else()
-    set(ASI_CAMS_INSTALL_PREFIX ${Python3_SITELIB})
+  set(ASI_CAMS_INSTALL_PREFIX ${Python3_SITELIB})
 endif()
+
 pybind11_add_module(pybind11_bindings MODULE srcpy/bindings.cpp)
 set_target_properties(pybind11_bindings PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/zwo_asi
   OUTPUT_NAME "bindings"
-  )
+)
 target_link_libraries(pybind11_bindings
   PUBLIC zwo_asi::zwo_asi ${LIBASICAMERA_PATH}
-  )
+)
 
 ###########
 # install #
 ###########
 
 install(
-    TARGETS zwo_asi 
-    EXPORT zwo_asiTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
+  TARGETS zwo_asi 
+  EXPORT zwo_asiTargets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 install(
-    TARGETS pybind11_bindings
-    COMPONENT bindings
-    LIBRARY DESTINATION ${ASI_CAMS_INSTALL_PREFIX}
-    ARCHIVE DESTINATION ${ASI_CAMS_INSTALL_PREFIX}
-    RUNTIME DESTINATION ${ASI_CAMS_INSTALL_PREFIX}
-    )
+  TARGETS pybind11_bindings
+  COMPONENT bindings
+  LIBRARY DESTINATION ${ASI_CAMS_INSTALL_PREFIX}
+  ARCHIVE DESTINATION ${ASI_CAMS_INSTALL_PREFIX}
+  RUNTIME DESTINATION ${ASI_CAMS_INSTALL_PREFIX}
+)
 
-  

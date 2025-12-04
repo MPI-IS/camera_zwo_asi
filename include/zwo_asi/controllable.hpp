@@ -1,4 +1,5 @@
 #pragma once
+#include "ASICamera2.h"
 #include "controllable_exception.hpp"
 
 namespace zwo_asi
@@ -14,6 +15,8 @@ public:
     bool is_writable;
     bool is_auto;
     bool supports_auto;
+    bool error;
+    int error_code;
 };
 
 }  // namespace zwo_asi

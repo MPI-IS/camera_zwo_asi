@@ -100,9 +100,9 @@ Controllable Camera::get_controllable(const ASI_CONTROL_CAPS& cap) const
         camera_index_, cap.ControlType, &(r.value), &is_auto_);
     if (error != ASI_SUCCESS)
     {
-        std::ostringstream s;
-        s << "failed to read values for parameter " << r.name;
-        throw CameraException(s.str(), camera_index_, error);
+        r.error = true;
+        r.error_code = static_cast<int>(error);
+        return r;
     }
     if (is_auto_ == ASI_TRUE)
     {
@@ -116,6 +116,8 @@ Controllable Camera::get_controllable(const ASI_CONTROL_CAPS& cap) const
     r.max_value = cap.MaxValue;
     r.supports_auto = cap.IsAutoSupported;
     r.is_writable = cap.IsWritable;
+    r.error = false;
+    r.error_code = ASI_SUCCESS;
     return r;
 }
 

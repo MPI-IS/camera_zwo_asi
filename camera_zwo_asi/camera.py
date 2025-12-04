@@ -117,6 +117,8 @@ class Camera(bindings.Camera):
         d: typing.Dict[str,typing.Any] = {}
         controllables: typing.Dict[str,typing.Any] = {}
         for key, controllable in self.get_controls().items():
+            if controllable.error:
+                continue
             if non_writable or controllable.is_writable:
                 if specify_auto and controllable.is_auto:
                     controllables[key] = "auto"
@@ -185,6 +187,8 @@ class Camera(bindings.Camera):
         Check if the controllable is suitable, i.e. can be used to configure
         the camera.
         """
+        if controllable.error:
+            return None
         if not controllable.is_writable:
             return None
         if controllable.is_auto and not controllable.supports_auto:
@@ -277,6 +281,9 @@ class Camera(bindings.Camera):
 
         controls = self.get_controls().values()
 
+        error_controls = [c for c in controls if c.error]
+        controls = [c for c in controls if not c.error]
+
         names = _same_length(
             ["|controllable", "-" * 13] + list((map(_str_control, controls)))
         )
@@ -294,6 +301,12 @@ class Camera(bindings.Camera):
 
         for name, value, min_, max_ in zip(names, values, mins, maxs):
             r.append("\t".join([name, value, min_, max_]))
+
+        for error_control in error_controls:
+            r.append(
+                f"|{error_control.name}\tcould not be queried: "
+                f"ASI error code {error_control.error_code}"
+            )
 
         r.append(
             "|legend: (w): is writable, (auto): in auto mode, (as): auto mode not active but supported\n"
