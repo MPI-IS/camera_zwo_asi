@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 import cmake_build_extension
 import setuptools
-from distutils.util import convert_path
 
 init_py = inspect.cleandoc(
     """
@@ -18,23 +17,22 @@ init_py = inspect.cleandoc(
     from .image import Image
     from .image import ImageType
     from .version import __version__
-
     """
 )
 
 CIBW_CMAKE_OPTIONS = []  # type: ignore
-if "CIBUILDWHEEL" in os.environ and os.environ["CIBUILDWHEEL"] == "1":
-
+if os.environ.get("CIBUILDWHEEL") == "1":
     if sys.platform == "linux":
         CIBW_CMAKE_OPTIONS += ["-DCMAKE_INSTALL_LIBDIR=lib"]
 
-version_path = convert_path("camera_zwo_asi/version.py")
+# Read version without distutils (distutils is removed in Python >=3.12)
+version_path = Path("camera_zwo_asi") / "version.py"
 version_dict = {}
-with open(version_path) as version_file:
+with version_path.open("r", encoding="utf-8") as version_file:
     exec(version_file.read(), version_dict)
 
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setuptools.setup(
     ext_modules=[
